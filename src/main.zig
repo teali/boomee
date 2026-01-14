@@ -34,13 +34,11 @@ fn dataCallback(
     while (i < frames) : (i += 1) {
         // Generate mono sample from the wavetable oscillator
 
-        const s: f32 = st.boomee.next() * 0.1;
+        const s = st.boomee.next();
 
         const base = i * channels;
-        var ch: usize = 0;
-        while (ch < channels) : (ch += 1) {
-            out[base + ch] = s;
-        }
+        out[base] = s[0];
+        out[base + 1] = s[1];
     }
 }
 
@@ -65,41 +63,51 @@ fn restoreMode(orig: *const c.termios) void {
 
 pub fn keyToMidiNote(ch: u8) ?u8 {
     return switch (ch) {
-        // White keys (home row), starting at F3
-        'a' => 53, // F3
-        's' => 55, // G3
-        'd' => 57, // A3
-        'f' => 59, // B3
-        'g' => 60, // C4 (middle C)
-        'h' => 62, // D4
-        'j' => 64, // E4
-        'k' => 65, // F4
-        'l' => 67, // G4
-        ';' => 69, // A4
-        '\'' => 71, // B4 (end at quote)
+        // Lower white keys (C3..E4)
+        'z' => 48, // C3
+        'x' => 50, // D3
+        'c' => 52, // E3
+        'v' => 53, // F3
+        'b' => 55, // G3
+        'n' => 57, // A3
+        'm' => 59, // B3
+        ',' => 60, // C4
+        '.' => 62, // D4
+        '/' => 64, // E4
 
-        // Black keys (top row), including your requirement: 'y' => C#4
-        'w' => 54, // F#3
-        'e' => 56, // G#3
-        'r' => 58, // A#3
-        'y' => 61, // C#4
-        'u' => 63, // D#4
-        'o' => 66, // F#4
-        'p' => 68, // G#4
+        // Lower black keys (C#3..D#4)
+        's' => 49, // C#3
+        'd' => 51, // D#3
+        'g' => 54, // F#3
+        'h' => 56, // G#3
+        'j' => 58, // A#3
+        'l' => 61, // C#4
+        ';' => 63, // D#4
+
+        // Upper white keys (F4..A5)
+        'q' => 65, // F4
+        'w' => 67, // G4
+        'e' => 69, // A4
+        'r' => 71, // B4
+        't' => 72, // C5
+        'y' => 74, // D5
+        'u' => 76, // E5
+        'i' => 77, // F5
+        'o' => 79, // G5
+        'p' => 81, // A5
+
+        // Upper black keys (F#4..A#5)
+        '2' => 66, // F#4
+        '3' => 68, // G#4
+        '4' => 70, // A#4
+        '6' => 73, // C#5
+        '7' => 75, // D#5
+        '9' => 78, // F#5
+        '0' => 80, // G#5
+        '-' => 82, // A#5
 
         else => null,
     };
-}
-
-pub fn midiNoteToFreq(note: u8) f32 {
-    // A4 (MIDI 69) = 440 Hz
-    const n: f32 = @floatFromInt(note);
-    return 440.0 * std.math.pow(f32, 2.0, (n - 69.0) / 12.0);
-}
-
-pub fn keyToFreq(ch: u8) ?f32 {
-    const note = keyToMidiNote(ch) orelse return null;
-    return midiNoteToFreq(note);
 }
 
 pub fn main() !void {
@@ -114,9 +122,10 @@ pub fn main() !void {
     var boomee = try alloc.create(Boomee);
     errdefer alloc.destroy(boomee);
 
-    try boomee.init();
+    try boomee.init(alloc);
 
     defer alloc.destroy(boomee);
+    defer boomee.deinit();
 
     //boomee.synth.voices.setFreq(440.0);
     var state = State{ .boomee = boomee };
@@ -150,10 +159,10 @@ pub fn main() !void {
     while (stdin.takeByte()) |char| {
         // do something with the char (u8)
         //        std.debug.print("you typed: {c}\n", .{char});
-        if (keyToFreq(char)) |freq| {
-            state.boomee.synth.noteOn(freq);
+        if (keyToMidiNote(char)) |note| {
+            state.boomee.synth.noteOn(note);
         }
 
-        if (char == 'q') break;
+        if (char == '`') break;
     } else |_| {}
 }
