@@ -3,6 +3,7 @@ const Wavetable = @import("wavetable.zig");
 const AudioConfig = @import("../../types/audio_config.zig");
 const Envelope = @import("../envelope/envelope.zig");
 const EnvelopeState = @import("../envelope/envelope_state.zig");
+const MIDI = @import("../../midi/midi.zig");
 
 const WavetableVoice = @This();
 
@@ -17,6 +18,7 @@ phase_inc: f32 = 0.0,
 starting_frame_pos: f32 = 0.0,
 // Continuous Frame position in [0, frame_count]
 frame_pos: f32 = 0.0,
+age: u32 = 0, // incremented at 44.1k hz at 128 samples is ~134 days of continuous run before overflow
 
 pub fn init(self: *WavetableVoice, table: *Wavetable, envelope: *Envelope) void {
     self.* = .{
@@ -35,12 +37,35 @@ pub fn setFreq(self: *WavetableVoice, freq: f32) void {
     self.phase_inc = freq / AudioConfig.sample_rate;
 }
 
-pub fn noteOn(self: *WavetableVoice, freq: f32) void {
+pub fn noteOn(self: *WavetableVoice, note: u8, age: u32) void {
+    self.setFreq(MIDI.midiNoteToFreq(note));
     self.phase = self.starting_phase;
-    self.phase_inc = freq / AudioConfig.sample_rate;
     self.frame_pos = self.starting_frame_pos;
+    self.age = age;
     self.envelopeState.noteOn();
+}
+
+pub fn noteOff(self: *WavetableVoice) void {
     self.envelopeState.noteOff();
+}
+
+pub fn isFree(self: *WavetableVoice) bool {
+    return self.envelopeState.isFree();
+}
+
+// Get a score to determine if this active voice should be stolen
+pub fn getStealScore(self: *WavetableVoice) u32 {
+    var bucket: u32 = 0;
+
+    if (self.envelopeState.curStage == .release) {
+        bucket = 0;
+    } else if (self.envelopeState.curStage == .sustain) {
+        bucket = 1;
+    } else {
+        bucket = self.age;
+    }
+
+    return bucket;
 }
 
 pub fn next(self: *WavetableVoice) f32 {

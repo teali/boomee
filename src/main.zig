@@ -1,6 +1,7 @@
 const std = @import("std");
 const zaudio = @import("zaudio");
-const Boomee = @import("boomee.zig").Boomee;
+const Boomee = @import("boomee.zig");
+const MIDI = @import("midi/midi.zig");
 
 const c = @cImport({
     @cInclude("termios.h");
@@ -110,6 +111,16 @@ pub fn keyToMidiNote(ch: u8) ?u8 {
     };
 }
 
+fn onMidi(delta_seconds: f64, msg: []const u8, user_data: ?*anyopaque) void {
+    _ = delta_seconds;
+    _ = user_data;
+
+    // msg is a slice of the raw MIDI bytes for one message
+    std.debug.print("MIDI: len={} bytes=", .{msg.len});
+    for (msg) |b| std.debug.print("{x:0>2} ", .{b});
+    std.debug.print("\n", .{});
+}
+
 pub fn main() !void {
     // zaudio requires init/deinit.
     zaudio.init(std.heap.c_allocator);
@@ -144,6 +155,8 @@ pub fn main() !void {
     defer device.destroy();
 
     try zaudio.Device.start(device);
+
+    while (true) std.Thread.sleep(200 * std.time.ns_per_ms);
 
     std.debug.print("Press Ctrl-C to quit.\n", .{});
 

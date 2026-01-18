@@ -36,6 +36,10 @@
             .url = "git+https://github.com/zig-gamedev/zaudio#bb93ad665b89e302d4515a36b44cb8e73eaf6766",
             .hash = "zaudio-0.11.0-dev-_M-91kHvPwAlW8MCRI4XiTbTeihqB8Zspgiuw-6Gqgdz",
         },
+        .rtmidi_z = .{
+            .url = "git+https://github.com/robbielyman/rtmidi_z#778089a7d04cd3afe256179b3ad98d3a89bf616a",
+            .hash = "rtmidi_z-6.0.0+53809fc-YOZ1LxE1AAASrJw_kBdJ-4ASBRbc8kBeW6LP4SwiINjE",
+        },
     },
     .paths = .{
         "build.zig",

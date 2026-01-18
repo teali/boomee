@@ -9,6 +9,12 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
+    const rtmidi = b.dependency("rtmidi_z", .{
+        .target = target,
+        .optimize = optimize,
+        .static = true, // builds a static RtMidi; defaults to false
+    });
+
     const exe = b.addExecutable(.{
         .name = "sine",
         .root_module = b.createModule(.{
@@ -19,12 +25,14 @@ pub fn build(b: *std.Build) void {
     });
 
     exe.root_module.addImport("zaudio", zaudio_dep.module("root"));
+    exe.root_module.addImport("rtmidi", rtmidi.module("rtmidi_z"));
 
     // This links the compiled miniaudio artifact that zaudio provides.
     exe.linkLibrary(zaudio_dep.artifact("miniaudio"));
 
     // libc is required.
     exe.linkLibC();
+    exe.linkLibCpp();
 
     b.installArtifact(exe);
 
